@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash /Users/a667155/.claude/plugins/cache/tdg-marketplace/tdg/0.4.0/skills/tdg/scripts/tdg_phase.sh 2>&1)",
+      "Bash(go test:*)",
+      "Bash(find:*)",
+      "Bash(go build:*)"
+    ]
+  }
+}
