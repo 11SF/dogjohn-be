@@ -11,8 +11,12 @@ import (
 	"gitdev.devops.krungthai.com/starwolf/backend/common/middleware"
 	"gitdev.devops.krungthai.com/starwolf/backend/common/token"
 
+	"github.com/11SF/dogjohn-be/app/feeder"
+	feederAccess "github.com/11SF/dogjohn-be/app/feeder/access"
 	"github.com/11SF/dogjohn-be/app/order"
-	"github.com/11SF/dogjohn-be/app/order/access"
+	orderAccess "github.com/11SF/dogjohn-be/app/order/access"
+	"github.com/11SF/dogjohn-be/app/payment"
+	paymentAccess "github.com/11SF/dogjohn-be/app/payment/access"
 	"github.com/11SF/dogjohn-be/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -67,6 +71,8 @@ func New(cfg config.Config, version, commit string, timeoutDuration time.Duratio
 	}
 
 	registerOrderRoutes(r, deps)
+	registerFeederRoutes(r, deps)
+	registerPaymentRoutes(r, deps)
 
 	return r, func() {
 		db.Close()
@@ -74,37 +80,59 @@ func New(cfg config.Config, version, commit string, timeoutDuration time.Duratio
 }
 
 func registerOrderRoutes(r *gin.Engine, deps routeDeps) {
-	orderRepo := access.NewOrderRepository(deps.db)
-	slipOKClient := access.NewSlipOKClient(
+	orderRepo := orderAccess.NewOrderRepository(deps.db)
+	slipOKClient := orderAccess.NewSlipOKClient(
 		deps.cfg.SlipOK.BaseURL,
 		deps.cfg.SlipOK.BranchID,
 		deps.cfg.SlipOK.APIKey,
 		deps.httpClient,
 	)
-	haClient := access.NewHomeAssistantClient(
+	haClient := orderAccess.NewHomeAssistantClient(
 		deps.cfg.HomeAssistant.BaseURL,
 		deps.cfg.HomeAssistant.Token,
 		deps.cfg.HomeAssistant.EntityID,
 		deps.httpClient,
 	)
 
-	cfg := order.HandlerConfig{
+	h := order.NewHandler(order.HandlerConfig{
 		OrderRepo: orderRepo,
 		SlipOK:    slipOKClient,
 		HAClient:  haClient,
-	}
+	})
 
-	h := order.NewHandler(cfg)
-
-	orderGroup := r.Group("/api/v1/order")
+	g := r.Group("/api/v1/order")
 	{
-		orderGroup.POST("/submit", h.SubmitOrder)
-		orderGroup.GET("/history", h.GetOrderHistory)
+		g.POST("/submit", h.SubmitOrder)
+		g.GET("/summary", h.GetOrderSummary)
+		g.GET("/history", h.GetOrderHistory)
+		g.GET("/:orderId", h.GetOrder)
 	}
 }
 
 func registerFeederRoutes(r *gin.Engine, deps routeDeps) {
+	feederRepo := feederAccess.NewFeederRepository(deps.db)
 
+	h := feeder.NewHandler(feeder.HandlerConfig{
+		FeederRepo: feederRepo,
+	})
+
+	g := r.Group("/api/v1/feeder")
+	{
+		g.GET("/availability", h.GetFeederAvailability)
+	}
+}
+
+func registerPaymentRoutes(r *gin.Engine, deps routeDeps) {
+	paymentRepo := paymentAccess.NewPaymentRepository(deps.db)
+
+	h := payment.NewHandler(payment.HandlerConfig{
+		PaymentRepo: paymentRepo,
+	})
+
+	g := r.Group("/api/v1/payment")
+	{
+		g.GET("/details", h.GetPaymentDetails)
+	}
 }
 
 // func newJWTVerifier(cfg config.Config) token.JWTVerifier {
