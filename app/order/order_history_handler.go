@@ -4,9 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/wrapper"
 	"github.com/11SF/dogjohn-be/app/order/access"
+	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
 )
@@ -40,24 +39,15 @@ func (h *handler) GetOrderHistory(c *gin.Context) {
 		Offset: offset,
 	})
 	if err != nil {
-		wrapper.Respond(c, wrapper.ResponseOption[OrderHistoryResponse]{
-			HTTPStatus: http.StatusInternalServerError,
-			Code:       app.CodeInternalError,
-			Message:    app.MessageInternalError,
-			Err:        err,
-		})
+		response.NewGinResponseError(c, http.StatusInternalServerError,
+			response.NewError(response.GenericError, "Internal Server Error"))
 		return
 	}
 
-	wrapper.Respond(c, wrapper.ResponseOption[OrderHistoryResponse]{
-		HTTPStatus: http.StatusOK,
-		Code:       app.CodeSuccess,
-		Message:    app.MessageSuccess,
-		Data: &OrderHistoryResponse{
-			Items: lo.Map(data.Items, func(item access.OrderHistoryItem, _ int) OrderHistoryItemResponse {
-				return mapOrderHistoryItem(item)
-			}),
-			Total: data.Total,
-		},
+	response.NewGinResponse(c, http.StatusOK, OrderHistoryResponse{
+		Items: lo.Map(data.Items, func(item access.OrderHistoryItem, _ int) OrderHistoryItemResponse {
+			return mapOrderHistoryItem(item)
+		}),
+		Total: data.Total,
 	})
 }

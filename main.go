@@ -1,18 +1,19 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"runtime/debug"
+	"syscall"
 	"time"
 
 	"github.com/11SF/dogjohn-be/config"
 	"github.com/11SF/dogjohn-be/router"
-
-	"gitdev.devops.krungthai.com/starwolf/backend/common/logger"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/shutdown"
+	"github.com/11SF/go-common/logger"
 
 	_ "embed"
 	_ "time/tzdata"
@@ -45,14 +46,23 @@ func init() {
 
 func main() {
 	cfg := config.C(config.Env)
-	_ = logger.New(logger.GCPKeyReplacer)
+	logger.Init("INFO")
 
 	r, stop := router.New(cfg, version, commit, handlerTimeout)
 	defer stop()
 
 	srv := newServer(cfg, r)
 
-	go shutdown.Graceful(srv, gracefulShutdownDuration)
+	go func() {
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGTERM, os.Interrupt)
+		<-quit
+		ctx, cancel := context.WithTimeout(context.Background(), gracefulShutdownDuration)
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
+			slog.Error("server shutdown", "error", err)
+		}
+	}()
 
 	slog.Info("run", "port", cfg.Server.Port)
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {

@@ -1,15 +1,10 @@
 package router
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"time"
-
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/database"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/health"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/httpclient"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/middleware"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/token"
 
 	"github.com/11SF/dogjohn-be/app/feeder"
 	feederAccess "github.com/11SF/dogjohn-be/app/feeder/access"
@@ -18,17 +13,16 @@ import (
 	"github.com/11SF/dogjohn-be/app/payment"
 	paymentAccess "github.com/11SF/dogjohn-be/app/payment/access"
 	"github.com/11SF/dogjohn-be/config"
+	"github.com/11SF/go-common/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gin-gonic/gin"
 )
 
 type routeDeps struct {
-	cfg         config.Config
-	httpClient  *http.Client
-	jwtVerifier token.JWTVerifier
-	jwtParser   token.JWTParser
-	db          *pgxpool.Pool
+	cfg        config.Config
+	httpClient *http.Client
+	db         *pgxpool.Pool
 }
 
 // New constructs a gin.Engine with routes and middleware configured.
@@ -40,33 +34,21 @@ func New(cfg config.Config, version, commit string, timeoutDuration time.Duratio
 		r.Use(gin.Logger())
 	}
 
-	r.GET("/liveness", health.Liveness(version, commit))
-	r.GET("/metrics", health.Metrics())
-	r.GET("/readiness", health.Readiness())
+	r.GET("/liveness", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok", "version": version, "commit": commit}) })
+	r.GET("/readiness", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 
-	r.Use(
-		middleware.SecurityHeaders(),
-		middleware.AccessControl(cfg.AccessControl.AllowOrigin, allowedHeaders(cfg.Header.RefIDHeaderKey)),
-		app.TraceContextTraceIDMiddleware(""),
-		app.RefIDMiddleware(cfg.Header.RefIDHeaderKey),
-		app.AutoLoggingMiddleware,
-		middleware.Timeout(timeoutDuration),
-		middleware.AccessLog(),
-	)
+	r.Use(logger.GinMiddleware())
 
-	httpClient := httpclient.NewHTTPClient(app.ForwardRefIDOption)
-
-	db := database.NewPostgresDB(database.PostgresConfig{
-		Host:     cfg.Database.Host,
-		Port:     cfg.Database.Port,
-		User:     cfg.Database.User,
-		Password: cfg.Database.Password,
-		DBName:   cfg.Database.DBName,
-	})
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		cfg.Database.Host, cfg.Database.Port, cfg.Database.User, cfg.Database.Password, cfg.Database.DBName)
+	db, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		panic(err)
+	}
 
 	deps := routeDeps{
 		cfg:        cfg,
-		httpClient: httpClient,
+		httpClient: &http.Client{},
 		db:         db,
 	}
 
@@ -134,20 +116,6 @@ func registerPaymentRoutes(r *gin.Engine, deps routeDeps) {
 		g.GET("/details", h.GetPaymentDetails)
 	}
 }
-
-// func newJWTVerifier(cfg config.Config) token.JWTVerifier {
-// 	return token.MustNewJWTVerifier(token.JWTVerifierConfig{
-// 		PublicKey: cfg.JWT.PublicKey,
-// 		Alg:       string(token.ES256),
-// 	})
-// }
-
-// func newJWTParser(cfg config.Config) token.JWTParser {
-// 	return token.MustNewJWTParser(token.JWTParserConfig{
-// 		Issuer:   cfg.JWT.Issuer,
-// 		Audience: cfg.JWT.Audience,
-// 	})
-// }
 
 func allowedHeaders(refIDHeaderKey string) []string {
 	return []string{

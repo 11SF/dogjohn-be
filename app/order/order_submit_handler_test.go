@@ -8,10 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/httpclient"
 	"github.com/11SF/dogjohn-be/app/order/access"
 	mocks "github.com/11SF/dogjohn-be/app/order/access/mocks"
+	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -52,11 +51,9 @@ func TestSubmitOrder_ShouldReturn200(t *testing.T) {
 	repoMock.EXPECT().SubmitOrder(mock.Anything, mock.Anything).
 		Return(&access.SubmitOrderResponse{OrderID: "order-123"}, nil)
 	slipOKMock.EXPECT().VerifySlip(mock.Anything, mock.Anything).
-		Return(httpclient.Response[access.VerifySlipResponse]{
-			Response: access.VerifySlipResponse{
-				Success: true,
-				Data:    &access.SlipOKData{TransRef: "TXN-001"},
-			},
+		Return(access.VerifySlipResponse{
+			Success: true,
+			Data:    &access.SlipOKData{TransRef: "TXN-001"},
 		}, nil)
 	repoMock.EXPECT().SavePaymentTxnLog(mock.Anything, "order-123", mock.Anything).Return(nil)
 	repoMock.EXPECT().IsPaymentTxnRefDuplicate(mock.Anything, "TXN-001").Return(false, nil)
@@ -70,7 +67,7 @@ func TestSubmitOrder_ShouldReturn200(t *testing.T) {
 	h.SubmitOrder(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp app.Response[SubmitOrderResponse]
+	var resp response.Type[SubmitOrderResponse]
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.NotNil(t, resp.Data)
 	assert.Equal(t, "order-123", resp.Data.OrderID)
@@ -130,9 +127,7 @@ func TestSubmitOrder_SlipInvalid_ShouldReturn422(t *testing.T) {
 	repoMock.EXPECT().SubmitOrder(mock.Anything, mock.Anything).
 		Return(&access.SubmitOrderResponse{OrderID: "order-123"}, nil)
 	slipOKMock.EXPECT().VerifySlip(mock.Anything, mock.Anything).
-		Return(httpclient.Response[access.VerifySlipResponse]{
-			Response: access.VerifySlipResponse{Success: false, Code: 1013},
-		}, nil)
+		Return(access.VerifySlipResponse{Success: false, Code: 1013}, nil)
 	repoMock.EXPECT().SavePaymentTxnLog(mock.Anything, "order-123", mock.Anything).Return(nil)
 	repoMock.EXPECT().UpdateOrderFailed(mock.Anything, "order-123", mock.Anything).Return(nil)
 
@@ -152,11 +147,9 @@ func TestSubmitOrder_DuplicateSlip_ShouldReturn422(t *testing.T) {
 	repoMock.EXPECT().SubmitOrder(mock.Anything, mock.Anything).
 		Return(&access.SubmitOrderResponse{OrderID: "order-123"}, nil)
 	slipOKMock.EXPECT().VerifySlip(mock.Anything, mock.Anything).
-		Return(httpclient.Response[access.VerifySlipResponse]{
-			Response: access.VerifySlipResponse{
-				Success: true,
-				Data:    &access.SlipOKData{TransRef: "TXN-DUP"},
-			},
+		Return(access.VerifySlipResponse{
+			Success: true,
+			Data:    &access.SlipOKData{TransRef: "TXN-DUP"},
 		}, nil)
 	repoMock.EXPECT().SavePaymentTxnLog(mock.Anything, "order-123", mock.Anything).Return(nil)
 	repoMock.EXPECT().IsPaymentTxnRefDuplicate(mock.Anything, "TXN-DUP").Return(true, nil)

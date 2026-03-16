@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
 	"github.com/11SF/dogjohn-be/app/order/access"
+	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -33,7 +33,7 @@ func TestGetOrder_ShouldReturn200(t *testing.T) {
 	h.GetOrder(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp app.Response[GetOrderResponse]
+	var resp response.Type[GetOrderResponse]
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.NotNil(t, resp.Data)
 	assert.Equal(t, "order-123", resp.Data.OrderID)

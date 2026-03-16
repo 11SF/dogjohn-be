@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
 	"github.com/11SF/dogjohn-be/app/order/access"
+	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -38,7 +38,7 @@ func TestGetOrderHistory_ShouldReturn200(t *testing.T) {
 	h.GetOrderHistory(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp app.Response[OrderHistoryResponse]
+	var resp response.Type[OrderHistoryResponse]
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.NotNil(t, resp.Data)
 	assert.Equal(t, 1, resp.Data.Total)

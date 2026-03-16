@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
 	"github.com/11SF/dogjohn-be/app/payment/access"
 	mocks "github.com/11SF/dogjohn-be/app/payment/access/mocks"
+	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -40,7 +40,7 @@ func TestGetPaymentDetails_ShouldReturn200(t *testing.T) {
 	h.GetPaymentDetails(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp app.Response[PaymentDetailsResponse]
+	var resp response.Type[PaymentDetailsResponse]
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.NotNil(t, resp.Data)
 	assert.Equal(t, "0812345678", resp.Data.PromptPayID)
@@ -61,7 +61,7 @@ func TestGetPaymentDetails_DBError_ShouldReturn500(t *testing.T) {
 	h.GetPaymentDetails(c)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	var resp app.Response[PaymentDetailsResponse]
+	var resp response.Type[PaymentDetailsResponse]
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
-	assert.Equal(t, string(app.CodeInternalError), string(resp.Code))
+	assert.Equal(t, string(response.GenericError), string(resp.Code))
 }

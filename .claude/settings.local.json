@@ -4,7 +4,17 @@
       "Bash(bash /Users/a667155/.claude/plugins/cache/tdg-marketplace/tdg/0.4.0/skills/tdg/scripts/tdg_phase.sh 2>&1)",
       "Bash(go test:*)",
       "Bash(find:*)",
-      "Bash(go build:*)"
+      "Bash(go build:*)",
+      "Bash(go mod:*)",
+      "Bash(GONOSUMCHECK=*)",
+      "Bash(GOFLAGS=-mod=mod go list -m -json github.com/11SF/go-common.git@v1.0.16)",
+      "Read(//private/tmp/**)",
+      "Bash(unzip -l ~/go/pkg/mod/cache/download/github.com/11!s!f/go-common/@v/v1.0.16.zip)",
+      "Bash(grep -E \"\\\\.go$\")",
+      "Bash(grep \"\\\\.go$\")",
+      "Bash(cd:*)",
+      "Bash(unzip:*)",
+      "Bash(go get:*)"
     ]
   }
 }

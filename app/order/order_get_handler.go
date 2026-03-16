@@ -4,9 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/wrapper"
 	"github.com/11SF/dogjohn-be/app/order/access"
+	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,38 +29,26 @@ func (h *handler) GetOrder(c *gin.Context) {
 
 	data, err := h.orderRepo.GetOrder(ctx, orderID)
 	if errors.Is(err, access.ErrNotFound) {
-		wrapper.Respond(c, wrapper.ResponseOption[GetOrderResponse]{
-			HTTPStatus: http.StatusNotFound,
-			Code:       app.CodeNotFound,
-			Message:    app.MessageNotFound,
-		})
+		response.NewGinResponseError(c, http.StatusNotFound,
+			response.NewError(response.NotFoundCode, "Not Found"))
 		return
 	}
 	if err != nil {
-		wrapper.Respond(c, wrapper.ResponseOption[GetOrderResponse]{
-			HTTPStatus: http.StatusInternalServerError,
-			Code:       app.CodeInternalError,
-			Message:    app.MessageInternalError,
-			Err:        err,
-		})
+		response.NewGinResponseError(c, http.StatusInternalServerError,
+			response.NewError(response.GenericError, "Internal Server Error"))
 		return
 	}
 
-	wrapper.Respond(c, wrapper.ResponseOption[GetOrderResponse]{
-		HTTPStatus: http.StatusOK,
-		Code:       app.CodeSuccess,
-		Message:    app.MessageSuccess,
-		Data: &GetOrderResponse{
-			OrderID:      data.OrderID,
-			CustomerName: data.CustomerName,
-			PriceDetails: PriceDetails{
-				Price:       data.PriceDetails.Price,
-				Description: data.PriceDetails.Description,
-			},
-			OrderStatus:   string(data.OrderStatus),
-			FailureReason: data.FailureReason,
-			OrderedAt:     data.OrderedAt,
+	response.NewGinResponse(c, http.StatusOK, GetOrderResponse{
+		OrderID:      data.OrderID,
+		CustomerName: data.CustomerName,
+		PriceDetails: PriceDetails{
+			Price:       data.PriceDetails.Price,
+			Description: data.PriceDetails.Description,
 		},
+		OrderStatus:   string(data.OrderStatus),
+		FailureReason: data.FailureReason,
+		OrderedAt:     data.OrderedAt,
 	})
 }
 

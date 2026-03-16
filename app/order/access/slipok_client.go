@@ -3,13 +3,12 @@ package access
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/http"
 	"strconv"
-
-	"gitdev.devops.krungthai.com/starwolf/backend/common/httpclient"
 )
 
 // SlipOK error codes
@@ -52,7 +51,7 @@ var slipOKErrorMap = map[int]error{
 // ─── Interface ────────────────────────────────────────────────────────────────
 
 type SlipOKClient interface {
-	VerifySlip(ctx context.Context, req VerifySlipRequest) (httpclient.Response[VerifySlipResponse], error)
+	VerifySlip(ctx context.Context, req VerifySlipRequest) (VerifySlipResponse, error)
 }
 
 type slipOKClient struct {
@@ -91,26 +90,26 @@ type VerifySlipResponse struct {
 }
 
 type SlipOKData struct {
-	Success           bool       `json:"success"`
-	Message           string     `json:"message"`
-	Language          string     `json:"language"`
-	ReceivingBank     string     `json:"receivingBank"`
-	SendingBank       string     `json:"sendingBank"`
-	TransRef          string     `json:"transRef"`
-	TransDate         string     `json:"transDate"`
-	TransTime         string     `json:"transTime"`
-	TransTimestamp    string     `json:"transTimestamp"`
-	Sender            SlipParty  `json:"sender"`
-	Receiver          SlipParty  `json:"receiver"`
-	Amount            float64    `json:"amount"`
-	PaidLocalAmount   float64    `json:"paidLocalAmount"`
-	PaidLocalCurrency string     `json:"paidLocalCurrency"`
-	CountryCode       string     `json:"countryCode"`
-	TransFeeAmount    string     `json:"transFeeAmount"`
-	Ref1              string     `json:"ref1"`
-	Ref2              string     `json:"ref2"`
-	Ref3              string     `json:"ref3"`
-	ToMerchantId      string     `json:"toMerchantId"`
+	Success           bool      `json:"success"`
+	Message           string    `json:"message"`
+	Language          string    `json:"language"`
+	ReceivingBank     string    `json:"receivingBank"`
+	SendingBank       string    `json:"sendingBank"`
+	TransRef          string    `json:"transRef"`
+	TransDate         string    `json:"transDate"`
+	TransTime         string    `json:"transTime"`
+	TransTimestamp    string    `json:"transTimestamp"`
+	Sender            SlipParty `json:"sender"`
+	Receiver          SlipParty `json:"receiver"`
+	Amount            float64   `json:"amount"`
+	PaidLocalAmount   float64   `json:"paidLocalAmount"`
+	PaidLocalCurrency string    `json:"paidLocalCurrency"`
+	CountryCode       string    `json:"countryCode"`
+	TransFeeAmount    string    `json:"transFeeAmount"`
+	Ref1              string    `json:"ref1"`
+	Ref2              string    `json:"ref2"`
+	Ref3              string    `json:"ref3"`
+	ToMerchantId      string    `json:"toMerchantId"`
 }
 
 type SlipParty struct {
@@ -132,16 +131,16 @@ type SlipAccount struct {
 
 // ─── Implementation ───────────────────────────────────────────────────────────
 
-func (c *slipOKClient) VerifySlip(ctx context.Context, req VerifySlipRequest) (httpclient.Response[VerifySlipResponse], error) {
+func (c *slipOKClient) VerifySlip(ctx context.Context, req VerifySlipRequest) (VerifySlipResponse, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
 	part, err := writer.CreateFormFile("files", "slip.jpg")
 	if err != nil {
-		return httpclient.Response[VerifySlipResponse]{}, fmt.Errorf("slipok: create form file: %w", err)
+		return VerifySlipResponse{}, fmt.Errorf("slipok: create form file: %w", err)
 	}
 	if _, err := part.Write(req.SlipImage); err != nil {
-		return httpclient.Response[VerifySlipResponse]{}, fmt.Errorf("slipok: write slip image: %w", err)
+		return VerifySlipResponse{}, fmt.Errorf("slipok: write slip image: %w", err)
 	}
 
 	logVal := "false"
@@ -149,13 +148,13 @@ func (c *slipOKClient) VerifySlip(ctx context.Context, req VerifySlipRequest) (h
 		logVal = "true"
 	}
 	if err := writer.WriteField("log", logVal); err != nil {
-		return httpclient.Response[VerifySlipResponse]{}, fmt.Errorf("slipok: write log field: %w", err)
+		return VerifySlipResponse{}, fmt.Errorf("slipok: write log field: %w", err)
 	}
 
 	if req.Amount != nil {
 		amountStr := strconv.FormatFloat(*req.Amount, 'f', -1, 64)
 		if err := writer.WriteField("amount", amountStr); err != nil {
-			return httpclient.Response[VerifySlipResponse]{}, fmt.Errorf("slipok: write amount field: %w", err)
+			return VerifySlipResponse{}, fmt.Errorf("slipok: write amount field: %w", err)
 		}
 	}
 
@@ -164,12 +163,21 @@ func (c *slipOKClient) VerifySlip(ctx context.Context, req VerifySlipRequest) (h
 	url := fmt.Sprintf("%s/api/line/apikey/%s", c.baseURL, c.branchID)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 	if err != nil {
-		return httpclient.Response[VerifySlipResponse]{}, fmt.Errorf("slipok: create request: %w", err)
+		return VerifySlipResponse{}, fmt.Errorf("slipok: create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
 	httpReq.Header.Set("x-authorization", c.apiKey)
 
-	return httpclient.DoRequest[VerifySlipResponse](c.client, httpReq)
+	resp, err := c.client.Do(httpReq)
+	if err != nil {
+		return VerifySlipResponse{}, fmt.Errorf("slipok: do request: %w", err)
+	}
+	defer resp.Body.Close()
+	var result VerifySlipResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return VerifySlipResponse{}, fmt.Errorf("slipok: decode response: %w", err)
+	}
+	return result, nil
 }
 
 // SlipOKError maps a VerifySlipResponse error code to a sentinel error.

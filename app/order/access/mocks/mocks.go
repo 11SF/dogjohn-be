@@ -7,7 +7,6 @@ package access_mocks
 import (
 	"context"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/httpclient"
 	"github.com/11SF/dogjohn-be/app/order/access"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -666,22 +665,22 @@ func (_m *SlipOKClientMock) EXPECT() *SlipOKClientMock_Expecter {
 }
 
 // VerifySlip provides a mock function for the type SlipOKClientMock
-func (_mock *SlipOKClientMock) VerifySlip(ctx context.Context, req access.VerifySlipRequest) (httpclient.Response[access.VerifySlipResponse], error) {
+func (_mock *SlipOKClientMock) VerifySlip(ctx context.Context, req access.VerifySlipRequest) (access.VerifySlipResponse, error) {
 	ret := _mock.Called(ctx, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VerifySlip")
 	}
 
-	var r0 httpclient.Response[access.VerifySlipResponse]
+	var r0 access.VerifySlipResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, access.VerifySlipRequest) (httpclient.Response[access.VerifySlipResponse], error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, access.VerifySlipRequest) (access.VerifySlipResponse, error)); ok {
 		return returnFunc(ctx, req)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, access.VerifySlipRequest) httpclient.Response[access.VerifySlipResponse]); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, access.VerifySlipRequest) access.VerifySlipResponse); ok {
 		r0 = returnFunc(ctx, req)
 	} else {
-		r0 = ret.Get(0).(httpclient.Response[access.VerifySlipResponse])
+		r0 = ret.Get(0).(access.VerifySlipResponse)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, access.VerifySlipRequest) error); ok {
 		r1 = returnFunc(ctx, req)
@@ -721,12 +720,12 @@ func (_c *SlipOKClientMock_VerifySlip_Call) Run(run func(ctx context.Context, re
 	return _c
 }
 
-func (_c *SlipOKClientMock_VerifySlip_Call) Return(response httpclient.Response[access.VerifySlipResponse], err error) *SlipOKClientMock_VerifySlip_Call {
+func (_c *SlipOKClientMock_VerifySlip_Call) Return(response access.VerifySlipResponse, err error) *SlipOKClientMock_VerifySlip_Call {
 	_c.Call.Return(response, err)
 	return _c
 }
 
-func (_c *SlipOKClientMock_VerifySlip_Call) RunAndReturn(run func(ctx context.Context, req access.VerifySlipRequest) (httpclient.Response[access.VerifySlipResponse], error)) *SlipOKClientMock_VerifySlip_Call {
+func (_c *SlipOKClientMock_VerifySlip_Call) RunAndReturn(run func(ctx context.Context, req access.VerifySlipRequest) (access.VerifySlipResponse, error)) *SlipOKClientMock_VerifySlip_Call {
 	_c.Call.Return(run)
 	return _c
 }
