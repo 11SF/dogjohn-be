@@ -29,7 +29,7 @@ func NewHomeAssistantClient(baseURL, token, entityID string, client *http.Client
 }
 
 func (c *homeAssistantClient) TriggerFeeder(ctx context.Context) error {
-	body, err := json.Marshal(map[string]any{"entity_id": c.entityID, "variables": 20})
+	body, err := json.Marshal(map[string]any{"entity_id": c.entityID, "variables": map[string]any{"amount": 20}})
 	if err != nil {
 		return fmt.Errorf("ha: marshal body: %w", err)
 	}
