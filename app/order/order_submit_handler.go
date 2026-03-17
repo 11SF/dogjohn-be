@@ -1,6 +1,7 @@
 package order
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"github.com/11SF/go-common/logger"
 	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 )
 
@@ -95,71 +97,74 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 		return
 	}
 
-	// 2. Verify payment slip
-	slipResp, err := h.slipOK.VerifySlip(ctx, access.VerifySlipRequest{
-		Amount:    lo.ToPtr(priceDetail.Price),
-		SlipImage: slipBytes,
-		Log:       false,
-	})
-	if err != nil {
-		logger.Error(ctx, "failed to submit order: failed to verify slip", slog.String("err", err.Error()), slog.String("tag", "submit order"))
-		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, err.Error())
-		response.NewGinResponseError(c, http.StatusInternalServerError,
-			response.NewError(response.GenericError, "Internal Server Error"))
-		return
-	}
+	txnRef := fmt.Sprintf("MOCK-TXN-REF-%s", uuid.NewString())
+	if !h.config.IsByPassVerifySlip {
+		// 2. Verify payment slip
+		slipResp, err := h.slipOK.VerifySlip(ctx, access.VerifySlipRequest{
+			Amount:    lo.ToPtr(priceDetail.Price),
+			SlipImage: slipBytes,
+			Log:       false,
+		})
+		if err != nil {
+			logger.Error(ctx, "failed to submit order: failed to verify slip", slog.String("err", err.Error()), slog.String("tag", "submit order"))
+			_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, err.Error())
+			response.NewGinResponseError(c, http.StatusInternalServerError,
+				response.NewError(response.GenericError, "Internal Server Error"))
+			return
+		}
 
-	// 3. Save raw SlipOK response
-	if logErr := h.orderRepo.SavePaymentTxnLog(ctx, order.OrderID, slipResp); logErr != nil {
-		logger.Error(ctx, "failed to save payment txn log", "error", logErr, "orderID", order.OrderID)
-	}
+		// 3. Save raw SlipOK response
+		if logErr := h.orderRepo.SavePaymentTxnLog(ctx, order.OrderID, slipResp); logErr != nil {
+			logger.Error(ctx, "failed to save payment txn log", "error", logErr, "orderID", order.OrderID)
+		}
 
-	// 4. Check slip validity
-	if slipResp.Data == nil {
-		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "slipok: missing data in response")
-		logger.Error(ctx, "failed to submit order: slipok returned nil data", slog.String("tag", "submit order"))
-		response.NewGinResponseError(c, http.StatusInternalServerError,
-			response.NewError(response.GenericError, "Internal Server Error"))
-		return
-	}
+		// 4. Check slip validity
+		if slipResp.Data == nil {
+			_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "slipok: missing data in response")
+			logger.Error(ctx, "failed to submit order: slipok returned nil data", slog.String("tag", "submit order"))
+			response.NewGinResponseError(c, http.StatusInternalServerError,
+				response.NewError(response.GenericError, "Internal Server Error"))
+			return
+		}
 
-	logger.Info(ctx, "slip verification result", slog.Bool("success", slipResp.Success), slog.Any("ok slip response", slipResp), slog.String("tag", "submit order"))
+		logger.Info(ctx, "slip verification result", slog.Bool("success", slipResp.Success), slog.Any("ok slip response", slipResp), slog.String("tag", "submit order"))
 
-	paidLocalAmount := slipResp.Data.PaidLocalAmount
-	receiverValue := lo.If(len(strings.Split(slipResp.Data.Receiver.Proxy.Value, "-")) == 3, strings.Split(slipResp.Data.Receiver.Proxy.Value, "-")[2]).Else(slipResp.Data.Receiver.Proxy.Value)
-	txnRef := slipResp.Data.TransRef
+		paidLocalAmount := slipResp.Data.PaidLocalAmount
+		receiverValue := lo.If(len(strings.Split(slipResp.Data.Receiver.Proxy.Value, "-")) == 3, strings.Split(slipResp.Data.Receiver.Proxy.Value, "-")[2]).Else(slipResp.Data.Receiver.Proxy.Value)
+		txnRef := slipResp.Data.TransRef
 
-	if paidLocalAmount < priceDetail.Price {
-		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "insufficient amount")
-		logger.Error(ctx, "failed to submit order: insufficient amount", slog.Float64("paidLocalAmount", paidLocalAmount), slog.Float64("expectedAmount", priceDetail.Price), slog.String("tag", "submit order"))
-		response.NewGinResponseError(c, http.StatusUnprocessableEntity,
-			response.NewError(response.BadRequestCode, "Unprocessable Entity"))
-		return
-	}
+		if paidLocalAmount < priceDetail.Price {
+			_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "insufficient amount")
+			logger.Error(ctx, "failed to submit order: insufficient amount", slog.Float64("paidLocalAmount", paidLocalAmount), slog.Float64("expectedAmount", priceDetail.Price), slog.String("tag", "submit order"))
+			response.NewGinResponseError(c, http.StatusUnprocessableEntity,
+				response.NewError(response.BadRequestCode, "Unprocessable Entity"))
+			return
+		}
 
-	if receiverValue != paymentDetail.PromptPayID[len(paymentDetail.PromptPayID)-4:] {
-		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "invalid receiver")
-		logger.Error(ctx, "failed to submit order: invalid receiver", slog.String("receiverValue", receiverValue), slog.String("expectedReceiver", paymentDetail.PromptPayID[len(paymentDetail.PromptPayID)-4:]), slog.String("tag", "submit order"))
-		response.NewGinResponseError(c, http.StatusUnprocessableEntity,
-			response.NewError(response.BadRequestCode, "Unprocessable Entity"))
-		return
-	}
+		if receiverValue != paymentDetail.PromptPayID[len(paymentDetail.PromptPayID)-4:] {
+			_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "invalid receiver")
+			logger.Error(ctx, "failed to submit order: invalid receiver", slog.String("receiverValue", receiverValue), slog.String("expectedReceiver", paymentDetail.PromptPayID[len(paymentDetail.PromptPayID)-4:]), slog.String("tag", "submit order"))
+			response.NewGinResponseError(c, http.StatusUnprocessableEntity,
+				response.NewError(response.BadRequestCode, "Unprocessable Entity"))
+			return
+		}
 
-	// 5. Check for duplicate slip
-	isDup, err := h.orderRepo.IsPaymentTxnRefDuplicate(ctx, txnRef)
-	if err != nil {
-		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "failed to check duplicate txn ref")
-		logger.Error(ctx, "failed to submit order: failed to check duplicate txn ref", slog.String("err", err.Error()), slog.String("tag", "submit order"))
-		response.NewGinResponseError(c, http.StatusInternalServerError,
-			response.NewError(response.GenericError, "Internal Server Error"))
-		return
-	}
-	if isDup {
-		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "duplicate slip")
-		logger.Error(ctx, "failed to submit order: duplicate slip", slog.String("tag", "submit order"))
-		response.NewGinResponseError(c, http.StatusUnprocessableEntity,
-			response.NewError(response.BadRequestCode, "Unprocessable Entity"))
-		return
+		// 5. Check for duplicate slip
+		isDup, err := h.orderRepo.IsPaymentTxnRefDuplicate(ctx, txnRef)
+		if err != nil {
+			_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "failed to check duplicate txn ref")
+			logger.Error(ctx, "failed to submit order: failed to check duplicate txn ref", slog.String("err", err.Error()), slog.String("tag", "submit order"))
+			response.NewGinResponseError(c, http.StatusInternalServerError,
+				response.NewError(response.GenericError, "Internal Server Error"))
+			return
+		}
+		if isDup {
+			_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "duplicate slip")
+			logger.Error(ctx, "failed to submit order: duplicate slip", slog.String("tag", "submit order"))
+			response.NewGinResponseError(c, http.StatusUnprocessableEntity,
+				response.NewError(response.BadRequestCode, "Unprocessable Entity"))
+			return
+		}
 	}
 
 	// 6. Update order to PROCESSING with txnRef
