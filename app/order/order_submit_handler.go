@@ -93,6 +93,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 		Log:       true,
 	})
 	if err != nil {
+		logger.Error(ctx, "failed to submit order: failed to verify slip", slog.String("err", err.Error()), slog.String("tag", "submit order"))
 		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, err.Error())
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
