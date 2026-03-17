@@ -35,7 +35,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	fileHeader, err := c.FormFile("slipImage")
 	if err != nil {
-		logger.Error(ctx, "failed to submit order: missing slipImage", slog.String("tag", "submit order"))
+		logger.Error(ctx, "failed to submit order: missing slipImage", slog.String("err", err.Error()), slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusBadRequest,
 			response.NewError(response.BadRequestCode, "Bad Request"))
 		return
@@ -43,7 +43,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	file, err := fileHeader.Open()
 	if err != nil {
-		logger.Error(ctx, "failed to submit order: failed to open slipImage", slog.String("tag", "submit order"))
+		logger.Error(ctx, "failed to submit order: failed to open slipImage", slog.String("err", err.Error()), slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
@@ -52,7 +52,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	slipBytes, err := io.ReadAll(file)
 	if err != nil {
-		logger.Error(ctx, "failed to submit order: failed to read slipImage", slog.String("tag", "submit order"))
+		logger.Error(ctx, "failed to submit order: failed to read slipImage", slog.String("err", err.Error()), slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
@@ -65,7 +65,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 		SlipImage:    slipBytes,
 	})
 	if err != nil {
-		logger.Error(ctx, "failed to submit order: failed to create order", slog.String("tag", "submit order"))
+		logger.Error(ctx, "failed to submit order: failed to create order", slog.String("err", err.Error()), slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
@@ -73,7 +73,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	priceDetail, err := h.paymentRepo.GetPrice(ctx, priceID)
 	if err != nil {
-		logger.Error(ctx, "failed to submit order: failed to get price details", slog.String("tag", "submit order"))
+		logger.Error(ctx, "failed to submit order: failed to get price details", slog.String("err", err.Error()), slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
@@ -107,7 +107,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 	// 4. Check slip validity
 	if slipErr := access.SlipOKError(slipResp); slipErr != nil {
 		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, slipErr.Error())
-		logger.Error(ctx, "failed to submit order: invalid slip", slog.String("tag", "submit order"))
+		logger.Error(ctx, "failed to submit order: invalid slip", slog.String("err", slipErr.Error()), slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusUnprocessableEntity,
 			response.NewError(response.BadRequestCode, "Unprocessable Entity"))
 		return
@@ -119,7 +119,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 	isDup, err := h.orderRepo.IsPaymentTxnRefDuplicate(ctx, txnRef)
 	if err != nil {
 		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "failed to check duplicate txn ref")
-		logger.Error(ctx, "failed to submit order: failed to check duplicate txn ref", slog.String("tag", "submit order"))
+		logger.Error(ctx, "failed to submit order: failed to check duplicate txn ref", slog.String("err", err.Error()), slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
@@ -134,7 +134,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	// 6. Update order to PROCESSING with txnRef
 	if err := h.orderRepo.UpdateOrderProcessing(ctx, order.OrderID, txnRef); err != nil {
-		logger.Error(ctx, "failed to submit order: failed to update order", slog.String("tag", "submit order"))
+		logger.Error(ctx, "failed to submit order: failed to update order", slog.String("err", err.Error()), slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
@@ -142,7 +142,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	// 7. Trigger dog feeder (best effort)
 	if err := h.haClient.TriggerFeeder(ctx); err != nil {
-		logger.Error(ctx, "failed to trigger feeder", "error", err, "orderID", order.OrderID)
+		logger.Error(ctx, "failed to trigger feeder", slog.String("err", err.Error()), slog.String("tag", "submit order"))
 	}
 
 	response.NewGinResponse(c, http.StatusOK, SubmitOrderResponse{OrderID: order.OrderID})
