@@ -720,8 +720,8 @@ func (_c *SlipOKClientMock_VerifySlip_Call) Run(run func(ctx context.Context, re
 	return _c
 }
 
-func (_c *SlipOKClientMock_VerifySlip_Call) Return(response access.VerifySlipResponse, err error) *SlipOKClientMock_VerifySlip_Call {
-	_c.Call.Return(response, err)
+func (_c *SlipOKClientMock_VerifySlip_Call) Return(verifySlipResponse access.VerifySlipResponse, err error) *SlipOKClientMock_VerifySlip_Call {
+	_c.Call.Return(verifySlipResponse, err)
 	return _c
 }
 

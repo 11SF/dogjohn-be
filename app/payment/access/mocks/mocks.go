@@ -99,3 +99,71 @@ func (_c *PaymentRepositoryMock_GetDetails_Call) RunAndReturn(run func(ctx conte
 	_c.Call.Return(run)
 	return _c
 }
+
+// GetPrice provides a mock function for the type PaymentRepositoryMock
+func (_mock *PaymentRepositoryMock) GetPrice(ctx context.Context, priceID string) (*access.Price, error) {
+	ret := _mock.Called(ctx, priceID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPrice")
+	}
+
+	var r0 *access.Price
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*access.Price, error)); ok {
+		return returnFunc(ctx, priceID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *access.Price); ok {
+		r0 = returnFunc(ctx, priceID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*access.Price)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, priceID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// PaymentRepositoryMock_GetPrice_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetPrice'
+type PaymentRepositoryMock_GetPrice_Call struct {
+	*mock.Call
+}
+
+// GetPrice is a helper method to define mock.On call
+//   - ctx context.Context
+//   - priceID string
+func (_e *PaymentRepositoryMock_Expecter) GetPrice(ctx interface{}, priceID interface{}) *PaymentRepositoryMock_GetPrice_Call {
+	return &PaymentRepositoryMock_GetPrice_Call{Call: _e.mock.On("GetPrice", ctx, priceID)}
+}
+
+func (_c *PaymentRepositoryMock_GetPrice_Call) Run(run func(ctx context.Context, priceID string)) *PaymentRepositoryMock_GetPrice_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *PaymentRepositoryMock_GetPrice_Call) Return(price *access.Price, err error) *PaymentRepositoryMock_GetPrice_Call {
+	_c.Call.Return(price, err)
+	return _c
+}
+
+func (_c *PaymentRepositoryMock_GetPrice_Call) RunAndReturn(run func(ctx context.Context, priceID string) (*access.Price, error)) *PaymentRepositoryMock_GetPrice_Call {
+	_c.Call.Return(run)
+	return _c
+}

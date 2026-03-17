@@ -8,6 +8,7 @@ import (
 	"github.com/11SF/dogjohn-be/app/order/access"
 	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
+	"github.com/samber/lo"
 )
 
 type SubmitOrderResponse struct {
@@ -60,8 +61,22 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 		return
 	}
 
+	priceDetail, err := h.paymentRepo.GetPrice(ctx, priceID)
+	if err != nil {
+		response.NewGinResponseError(c, http.StatusInternalServerError,
+			response.NewError(response.GenericError, "Internal Server Error"))
+		return
+	}
+
+	if priceDetail == nil {
+		response.NewGinResponseError(c, http.StatusBadRequest,
+			response.NewError(response.BadRequestCode, "Invalid priceId"))
+		return
+	}
+
 	// 2. Verify payment slip
 	slipResp, err := h.slipOK.VerifySlip(ctx, access.VerifySlipRequest{
+		Amount:    lo.ToPtr(priceDetail.Price),
 		SlipImage: slipBytes,
 		Log:       true,
 	})

@@ -2,12 +2,15 @@ package access
 
 import (
 	"context"
+	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PaymentRepository interface {
 	GetDetails(ctx context.Context) (*PaymentDetailsResponse, error)
+	GetPrice(ctx context.Context, priceID string) (*Price, error)
 }
 
 type paymentRepository struct {
@@ -60,4 +63,19 @@ func (r *paymentRepository) GetDetails(ctx context.Context) (*PaymentDetailsResp
 		PromptPayID: promptPayID,
 		Prices:      prices,
 	}, nil
+}
+
+func (r *paymentRepository) GetPrice(ctx context.Context, priceID string) (*Price, error) {
+	var p Price
+	row := r.db.QueryRow(ctx,
+		`SELECT id, price, description FROM price_options WHERE id = $1`,
+		priceID,
+	)
+	if err := row.Scan(&p.ID, &p.Price, &p.Description); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &p, nil
 }

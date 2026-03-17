@@ -63,6 +63,7 @@ func New(cfg config.Config, version, commit string, timeoutDuration time.Duratio
 
 func registerOrderRoutes(r *gin.Engine, deps routeDeps) {
 	orderRepo := orderAccess.NewOrderRepository(deps.db)
+	paymentRepo := paymentAccess.NewPaymentRepository(deps.db)
 	slipOKClient := orderAccess.NewSlipOKClient(
 		deps.cfg.SlipOK.BaseURL,
 		deps.cfg.SlipOK.BranchID,
@@ -77,9 +78,10 @@ func registerOrderRoutes(r *gin.Engine, deps routeDeps) {
 	)
 
 	h := order.NewHandler(order.HandlerConfig{
-		OrderRepo: orderRepo,
-		SlipOK:    slipOKClient,
-		HAClient:  haClient,
+		OrderRepo:   orderRepo,
+		PaymentRepo: paymentRepo,
+		SlipOK:      slipOKClient,
+		HAClient:    haClient,
 	})
 
 	g := r.Group("/api/v1/order")
