@@ -78,6 +78,7 @@ func registerOrderRoutes(r *gin.Engine, deps routeDeps) {
 	)
 
 	h := order.NewHandler(order.HandlerConfig{
+		Config:      deps.cfg,
 		OrderRepo:   orderRepo,
 		PaymentRepo: paymentRepo,
 		SlipOK:      slipOKClient,
