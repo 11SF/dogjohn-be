@@ -85,7 +85,6 @@ type VerifySlipRequest struct {
 
 type VerifySlipResponse struct {
 	Success bool        `json:"success"`
-	Code    int         `json:"code,omitempty"`
 	Data    *SlipOKData `json:"data"`
 }
 
@@ -182,12 +181,12 @@ func (c *slipOKClient) VerifySlip(ctx context.Context, req VerifySlipRequest) (V
 
 // SlipOKError maps a VerifySlipResponse error code to a sentinel error.
 // Returns nil if the response was successful.
-func SlipOKError(resp VerifySlipResponse) error {
-	if resp.Success {
-		return nil
-	}
-	if sentinel, ok := slipOKErrorMap[resp.Code]; ok {
-		return sentinel
-	}
-	return fmt.Errorf("slipok: unknown error code %d", resp.Code)
-}
+// func SlipOKError(resp VerifySlipResponse) error {
+// 	if resp.Success {
+// 		return nil
+// 	}
+// 	if sentinel, ok := slipOKErrorMap[resp.Code]; ok {
+// 		return sentinel
+// 	}
+// 	return fmt.Errorf("slipok: unknown error code %d", resp.Code)
+// }

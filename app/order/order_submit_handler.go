@@ -106,19 +106,21 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 	}
 
 	// 4. Check slip validity
-	if slipErr := access.SlipOKError(slipResp); slipErr != nil {
-		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, slipErr.Error())
-		logger.Error(ctx, "failed to submit order: invalid slip", slog.String("err", slipErr.Error()), slog.String("tag", "submit order"))
-		response.NewGinResponseError(c, http.StatusUnprocessableEntity,
-			response.NewError(response.BadRequestCode, "Unprocessable Entity"))
-		return
-	}
-
 	if slipResp.Data == nil {
 		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "slipok: missing data in response")
 		logger.Error(ctx, "failed to submit order: slipok returned nil data", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
+		return
+	}
+
+	logger.Info(ctx, "slip verification result", slog.Bool("success", slipResp.Success), slog.Any("ok slip response", slipResp.Data), slog.String("tag", "submit order"))
+
+	if !slipResp.Data.Success {
+		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "invalid slip")
+		logger.Error(ctx, "failed to submit order: invalid slip", slog.String("tag", "submit order"))
+		response.NewGinResponseError(c, http.StatusUnprocessableEntity,
+			response.NewError(response.BadRequestCode, "Unprocessable Entity"))
 		return
 	}
 
