@@ -114,6 +114,14 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 		return
 	}
 
+	if slipResp.Data == nil {
+		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "slipok: missing data in response")
+		logger.Error(ctx, "failed to submit order: slipok returned nil data", slog.String("tag", "submit order"))
+		response.NewGinResponseError(c, http.StatusInternalServerError,
+			response.NewError(response.GenericError, "Internal Server Error"))
+		return
+	}
+
 	txnRef := slipResp.Data.TransRef
 
 	// 5. Check for duplicate slip
