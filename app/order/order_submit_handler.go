@@ -4,6 +4,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/11SF/dogjohn-be/app/order/access"
 	"github.com/11SF/go-common/logger"
@@ -86,11 +87,19 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 		return
 	}
 
+	paymentDetail, err := h.paymentRepo.GetDetails(ctx)
+	if err != nil {
+		logger.Error(ctx, "failed to submit order: failed to get payment details", slog.String("err", err.Error()), slog.String("tag", "submit order"))
+		response.NewGinResponseError(c, http.StatusInternalServerError,
+			response.NewError(response.GenericError, "Internal Server Error"))
+		return
+	}
+
 	// 2. Verify payment slip
 	slipResp, err := h.slipOK.VerifySlip(ctx, access.VerifySlipRequest{
 		Amount:    lo.ToPtr(priceDetail.Price),
 		SlipImage: slipBytes,
-		Log:       true,
+		Log:       false,
 	})
 	if err != nil {
 		logger.Error(ctx, "failed to submit order: failed to verify slip", slog.String("err", err.Error()), slog.String("tag", "submit order"))
@@ -116,15 +125,25 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	logger.Info(ctx, "slip verification result", slog.Bool("success", slipResp.Success), slog.Any("ok slip response", slipResp), slog.String("tag", "submit order"))
 
-	if !slipResp.Data.Success {
-		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "invalid slip")
-		logger.Error(ctx, "failed to submit order: invalid slip", slog.String("tag", "submit order"))
+	paidLocalAmount := slipResp.Data.PaidLocalAmount
+	receiverValue := lo.If(len(strings.Split(slipResp.Data.Receiver.Proxy.Value, "-")) == 3, strings.Split(slipResp.Data.Receiver.Proxy.Value, "-")[2]).Else(slipResp.Data.Receiver.Proxy.Value)
+	txnRef := slipResp.Data.TransRef
+
+	if paidLocalAmount < priceDetail.Price {
+		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "insufficient amount")
+		logger.Error(ctx, "failed to submit order: insufficient amount", slog.Float64("paidLocalAmount", paidLocalAmount), slog.Float64("expectedAmount", priceDetail.Price), slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusUnprocessableEntity,
 			response.NewError(response.BadRequestCode, "Unprocessable Entity"))
 		return
 	}
 
-	txnRef := slipResp.Data.TransRef
+	if receiverValue != paymentDetail.PromptPayID[len(paymentDetail.PromptPayID)-4:] {
+		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "invalid receiver")
+		logger.Error(ctx, "failed to submit order: invalid receiver", slog.String("receiverValue", receiverValue), slog.String("expectedReceiver", paymentDetail.PromptPayID[len(paymentDetail.PromptPayID)-4:]), slog.String("tag", "submit order"))
+		response.NewGinResponseError(c, http.StatusUnprocessableEntity,
+			response.NewError(response.BadRequestCode, "Unprocessable Entity"))
+		return
+	}
 
 	// 5. Check for duplicate slip
 	isDup, err := h.orderRepo.IsPaymentTxnRefDuplicate(ctx, txnRef)
