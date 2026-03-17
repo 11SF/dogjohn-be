@@ -114,7 +114,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 		return
 	}
 
-	logger.Info(ctx, "slip verification result", slog.Bool("success", slipResp.Success), slog.Any("ok slip response", slipResp.Data), slog.String("tag", "submit order"))
+	logger.Info(ctx, "slip verification result", slog.Bool("success", slipResp.Success), slog.Any("ok slip response", slipResp), slog.String("tag", "submit order"))
 
 	if !slipResp.Data.Success {
 		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "invalid slip")
