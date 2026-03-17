@@ -21,10 +21,14 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 	priceID := c.PostForm("priceId")
 	customerName := c.PostForm("customerName")
 
-	if priceID == "" || customerName == "" {
+	if priceID == "" {
 		response.NewGinResponseError(c, http.StatusBadRequest,
 			response.NewError(response.BadRequestCode, "Bad Request"))
 		return
+	}
+
+	if customerName == "" {
+		customerName = "Anonymous"
 	}
 
 	fileHeader, err := c.FormFile("slipImage")
