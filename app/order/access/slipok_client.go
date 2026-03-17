@@ -104,7 +104,7 @@ type SlipOKData struct {
 	PaidLocalAmount   float64   `json:"paidLocalAmount"`
 	PaidLocalCurrency string    `json:"paidLocalCurrency"`
 	CountryCode       string    `json:"countryCode"`
-	TransFeeAmount    string    `json:"transFeeAmount"`
+	TransFeeAmount    float64   `json:"transFeeAmount"`
 	Ref1              string    `json:"ref1"`
 	Ref2              string    `json:"ref2"`
 	Ref3              string    `json:"ref3"`
