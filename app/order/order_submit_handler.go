@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/11SF/dogjohn-be/app/order/access"
+	"github.com/11SF/go-common/logger"
 	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
@@ -22,6 +23,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 	customerName := c.PostForm("customerName")
 
 	if priceID == "" {
+		logger.Error(ctx, "failed to submit order: missing priceId", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusBadRequest,
 			response.NewError(response.BadRequestCode, "Bad Request"))
 		return
@@ -33,6 +35,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	fileHeader, err := c.FormFile("slipImage")
 	if err != nil {
+		logger.Error(ctx, "failed to submit order: missing slipImage", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusBadRequest,
 			response.NewError(response.BadRequestCode, "Bad Request"))
 		return
@@ -40,6 +43,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	file, err := fileHeader.Open()
 	if err != nil {
+		logger.Error(ctx, "failed to submit order: failed to open slipImage", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
@@ -48,6 +52,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	slipBytes, err := io.ReadAll(file)
 	if err != nil {
+		logger.Error(ctx, "failed to submit order: failed to read slipImage", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
@@ -60,6 +65,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 		SlipImage:    slipBytes,
 	})
 	if err != nil {
+		logger.Error(ctx, "failed to submit order: failed to create order", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
@@ -67,12 +73,14 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	priceDetail, err := h.paymentRepo.GetPrice(ctx, priceID)
 	if err != nil {
+		logger.Error(ctx, "failed to submit order: failed to get price details", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
 	}
 
 	if priceDetail == nil {
+		logger.Error(ctx, "failed to submit order: invalid priceId", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusBadRequest,
 			response.NewError(response.BadRequestCode, "Invalid priceId"))
 		return
@@ -93,12 +101,13 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	// 3. Save raw SlipOK response
 	if logErr := h.orderRepo.SavePaymentTxnLog(ctx, order.OrderID, slipResp); logErr != nil {
-		slog.ErrorContext(ctx, "failed to save payment txn log", "error", logErr, "orderID", order.OrderID)
+		logger.Error(ctx, "failed to save payment txn log", "error", logErr, "orderID", order.OrderID)
 	}
 
 	// 4. Check slip validity
 	if slipErr := access.SlipOKError(slipResp); slipErr != nil {
 		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, slipErr.Error())
+		logger.Error(ctx, "failed to submit order: invalid slip", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusUnprocessableEntity,
 			response.NewError(response.BadRequestCode, "Unprocessable Entity"))
 		return
@@ -110,12 +119,14 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 	isDup, err := h.orderRepo.IsPaymentTxnRefDuplicate(ctx, txnRef)
 	if err != nil {
 		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "failed to check duplicate txn ref")
+		logger.Error(ctx, "failed to submit order: failed to check duplicate txn ref", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
 	}
 	if isDup {
 		_ = h.orderRepo.UpdateOrderFailed(ctx, order.OrderID, "duplicate slip")
+		logger.Error(ctx, "failed to submit order: duplicate slip", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusUnprocessableEntity,
 			response.NewError(response.BadRequestCode, "Unprocessable Entity"))
 		return
@@ -123,6 +134,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	// 6. Update order to PROCESSING with txnRef
 	if err := h.orderRepo.UpdateOrderProcessing(ctx, order.OrderID, txnRef); err != nil {
+		logger.Error(ctx, "failed to submit order: failed to update order", slog.String("tag", "submit order"))
 		response.NewGinResponseError(c, http.StatusInternalServerError,
 			response.NewError(response.GenericError, "Internal Server Error"))
 		return
@@ -130,7 +142,7 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 
 	// 7. Trigger dog feeder (best effort)
 	if err := h.haClient.TriggerFeeder(ctx); err != nil {
-		slog.ErrorContext(ctx, "failed to trigger feeder", "error", err, "orderID", order.OrderID)
+		logger.Error(ctx, "failed to trigger feeder", "error", err, "orderID", order.OrderID)
 	}
 
 	response.NewGinResponse(c, http.StatusOK, SubmitOrderResponse{OrderID: order.OrderID})
