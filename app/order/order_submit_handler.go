@@ -130,7 +130,9 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 		logger.Info(ctx, "slip verification result", slog.Bool("success", slipResp.Success), slog.Any("ok slip response", slipResp), slog.String("tag", "submit order"))
 
 		paidLocalAmount := slipResp.Data.PaidLocalAmount
-		receiverValue := lo.If(len(strings.Split(slipResp.Data.Receiver.Proxy.Value, "-")) == 3, strings.Split(slipResp.Data.Receiver.Proxy.Value, "-")[2]).Else(slipResp.Data.Receiver.Proxy.Value)
+
+		rawProxyValue := strings.ReplaceAll(slipResp.Data.Receiver.Proxy.Value, "-", "")
+		receiverValue := rawProxyValue[len(rawProxyValue)-4:]
 		txnRef := slipResp.Data.TransRef
 
 		if paidLocalAmount < priceDetail.Price {
