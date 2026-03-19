@@ -180,5 +180,10 @@ func (h *handler) SubmitOrder(c *gin.Context) {
 		logger.Error(ctx, "failed to trigger feeder", slog.String("err", err.Error()), slog.String("tag", "submit order"))
 	}
 
+	// 8. Update order to COMPLETED
+	if err := h.orderRepo.UpdateOrderCompleted(ctx, order.OrderID); err != nil {
+		logger.Error(ctx, "failed to update order to completed", slog.String("err", err.Error()), slog.String("tag", "submit order"))
+	}
+
 	response.NewGinResponse(c, http.StatusOK, SubmitOrderResponse{OrderID: order.OrderID})
 }

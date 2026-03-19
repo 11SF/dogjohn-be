@@ -19,6 +19,7 @@ type OrderRepository interface {
 	GetOrderHistory(ctx context.Context, req OrderHistoryRequest) (*OrderHistoryResponse, error)
 	SavePaymentTxnLog(ctx context.Context, orderID string, response any) error
 	UpdateOrderProcessing(ctx context.Context, orderID, paymentTxnRef string) error
+	UpdateOrderCompleted(ctx context.Context, orderID string) error
 	UpdateOrderFailed(ctx context.Context, orderID, reason string) error
 	IsPaymentTxnRefDuplicate(ctx context.Context, txnRef string) (bool, error)
 }
@@ -56,13 +57,13 @@ type SubmitOrderResponse struct {
 }
 
 type GetOrderResponse struct {
-	OrderID        string       `json:"orderId"`
-	CustomerName   string       `json:"customerName"`
-	PriceDetails   PriceDetails `json:"priceDetails"`
-	OrderStatus    OrderStatus  `json:"orderStatus"`
-	FailureReason  *string      `json:"failureReason"`
-	PaymentTxnRef  string       `json:"paymentTxnRef"`
-	OrderedAt      int64        `json:"orderedAt"`
+	OrderID       string       `json:"orderId"`
+	CustomerName  string       `json:"customerName"`
+	PriceDetails  PriceDetails `json:"priceDetails"`
+	OrderStatus   OrderStatus  `json:"orderStatus"`
+	FailureReason *string      `json:"failureReason"`
+	PaymentTxnRef string       `json:"paymentTxnRef"`
+	OrderedAt     int64        `json:"orderedAt"`
 }
 
 type OrderSummaryResponse struct {
@@ -210,6 +211,14 @@ func (r *orderRepository) UpdateOrderProcessing(ctx context.Context, orderID, pa
 	_, err := r.db.Exec(ctx,
 		`UPDATE orders SET order_status = $2, payment_txn_ref = $3 WHERE id = $1`,
 		orderID, string(OrderStatusProcessing), paymentTxnRef,
+	)
+	return err
+}
+
+func (r *orderRepository) UpdateOrderCompleted(ctx context.Context, orderID string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE orders SET order_status = $2 WHERE id = $1`,
+		orderID, string(OrderStatusCompleted),
 	)
 	return err
 }
