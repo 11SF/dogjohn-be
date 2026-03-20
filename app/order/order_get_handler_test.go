@@ -15,7 +15,7 @@ import (
 
 func TestGetOrder_ShouldReturn200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrder(mock.Anything, "order-123").Return(&access.GetOrderResponse{
 		OrderID:      "order-123",
@@ -42,7 +42,7 @@ func TestGetOrder_ShouldReturn200(t *testing.T) {
 
 func TestGetOrder_NotFound_ShouldReturn404(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrder(mock.Anything, "not-found").Return(nil, access.ErrNotFound)
 
@@ -58,7 +58,7 @@ func TestGetOrder_NotFound_ShouldReturn404(t *testing.T) {
 
 func TestGetOrder_DBError_ShouldReturn500(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrder(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 

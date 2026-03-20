@@ -15,7 +15,7 @@ import (
 
 func TestGetOrderHistory_ShouldReturn200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrderHistory(mock.Anything, access.OrderHistoryRequest{Limit: 20, Offset: 0}).
 		Return(&access.OrderHistoryResponse{
@@ -48,7 +48,7 @@ func TestGetOrderHistory_ShouldReturn200(t *testing.T) {
 
 func TestGetOrderHistory_WithPagination_ShouldPassParams(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrderHistory(mock.Anything, access.OrderHistoryRequest{Limit: 10, Offset: 20}).
 		Return(&access.OrderHistoryResponse{Items: []access.OrderHistoryItem{}, Total: 100}, nil)
@@ -64,7 +64,7 @@ func TestGetOrderHistory_WithPagination_ShouldPassParams(t *testing.T) {
 
 func TestGetOrderHistory_DBError_ShouldReturn500(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrderHistory(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 

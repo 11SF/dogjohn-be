@@ -15,7 +15,7 @@ import (
 
 func TestGetOrderSummary_ShouldReturn200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrderSummary(mock.Anything).Return(&access.OrderSummaryResponse{
 		Today:       5,
@@ -40,7 +40,7 @@ func TestGetOrderSummary_ShouldReturn200(t *testing.T) {
 
 func TestGetOrderSummary_DBError_ShouldReturn500(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrderSummary(mock.Anything).Return(nil, assert.AnError)
 

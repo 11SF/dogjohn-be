@@ -172,10 +172,12 @@ func (r *orderRepository) GetOrderHistory(ctx context.Context, req OrderHistoryR
 		`SELECT o.id, o.customer_name, p.price::text, p.description, o.order_status, o.ordered_at
 		 FROM orders o
 		 JOIN price_options p ON o.price_id = p.id
+     WHERE o.order_status NOT IN ($3)
 		 ORDER BY o.ordered_at DESC
 		 LIMIT $1 OFFSET $2`,
 		req.Limit,
 		req.Offset,
+		OrderStatusFailed,
 	)
 	if err != nil {
 		return nil, err
