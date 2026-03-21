@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
 	"github.com/11SF/dogjohn-be/app/feeder/access"
 	mocks "github.com/11SF/dogjohn-be/app/feeder/access/mocks"
+	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -36,7 +36,7 @@ func TestGetFeederAvailability_Available_ShouldReturn200(t *testing.T) {
 	h.GetFeederAvailability(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp app.Response[FeederAvailabilityResponse]
+	var resp response.Type[FeederAvailabilityResponse]
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.True(t, resp.Data.Available)
 }
@@ -57,7 +57,7 @@ func TestGetFeederAvailability_Unavailable_ShouldReturn200WithReason(t *testing.
 	h.GetFeederAvailability(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp app.Response[FeederAvailabilityResponse]
+	var resp response.Type[FeederAvailabilityResponse]
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.False(t, resp.Data.Available)
 	assert.Equal(t, "เครื่องขัดข้อง", *resp.Data.Reason)

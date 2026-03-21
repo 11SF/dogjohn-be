@@ -3,8 +3,7 @@ package payment
 import (
 	"net/http"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/wrapper"
+	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,12 +23,8 @@ func (h *handler) GetPaymentDetails(c *gin.Context) {
 
 	data, err := h.paymentRepo.GetDetails(ctx)
 	if err != nil {
-		wrapper.Respond(c, wrapper.ResponseOption[PaymentDetailsResponse]{
-			HTTPStatus: http.StatusInternalServerError,
-			Code:       app.CodeInternalError,
-			Message:    app.MessageInternalError,
-			Err:        err,
-		})
+		response.NewGinResponseError(c, http.StatusInternalServerError,
+			response.NewError(response.GenericError, "Internal Server Error"))
 		return
 	}
 
@@ -38,13 +33,8 @@ func (h *handler) GetPaymentDetails(c *gin.Context) {
 		prices[i] = Price{ID: p.ID, Price: p.Price, Description: p.Description}
 	}
 
-	wrapper.Respond(c, wrapper.ResponseOption[PaymentDetailsResponse]{
-		HTTPStatus: http.StatusOK,
-		Code:       app.CodeSuccess,
-		Message:    app.MessageSuccess,
-		Data: &PaymentDetailsResponse{
-			PromptPayID: data.PromptPayID,
-			Prices:      prices,
-		},
+	response.NewGinResponse(c, http.StatusOK, PaymentDetailsResponse{
+		PromptPayID: data.PromptPayID,
+		Prices:      prices,
 	})
 }

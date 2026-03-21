@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
 	"github.com/11SF/dogjohn-be/app/order/access"
+	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -15,7 +15,7 @@ import (
 
 func TestGetOrderHistory_ShouldReturn200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrderHistory(mock.Anything, access.OrderHistoryRequest{Limit: 20, Offset: 0}).
 		Return(&access.OrderHistoryResponse{
@@ -38,7 +38,7 @@ func TestGetOrderHistory_ShouldReturn200(t *testing.T) {
 	h.GetOrderHistory(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp app.Response[OrderHistoryResponse]
+	var resp response.Type[OrderHistoryResponse]
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.NotNil(t, resp.Data)
 	assert.Equal(t, 1, resp.Data.Total)
@@ -48,7 +48,7 @@ func TestGetOrderHistory_ShouldReturn200(t *testing.T) {
 
 func TestGetOrderHistory_WithPagination_ShouldPassParams(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrderHistory(mock.Anything, access.OrderHistoryRequest{Limit: 10, Offset: 20}).
 		Return(&access.OrderHistoryResponse{Items: []access.OrderHistoryItem{}, Total: 100}, nil)
@@ -64,7 +64,7 @@ func TestGetOrderHistory_WithPagination_ShouldPassParams(t *testing.T) {
 
 func TestGetOrderHistory_DBError_ShouldReturn500(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrderHistory(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 

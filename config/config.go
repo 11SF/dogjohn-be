@@ -38,6 +38,8 @@ type Config struct {
 	Database      Database
 	SlipOK        SlipOK
 	HomeAssistant HomeAssistant
+
+	IsByPassVerifySlip bool `env:"FEATURE_FLAG_IS_BYPASS_VERIFY_SLIP"`
 }
 
 type Server struct {

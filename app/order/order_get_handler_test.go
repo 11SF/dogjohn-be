@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
 	"github.com/11SF/dogjohn-be/app/order/access"
+	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -15,7 +15,7 @@ import (
 
 func TestGetOrder_ShouldReturn200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrder(mock.Anything, "order-123").Return(&access.GetOrderResponse{
 		OrderID:      "order-123",
@@ -33,7 +33,7 @@ func TestGetOrder_ShouldReturn200(t *testing.T) {
 	h.GetOrder(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp app.Response[GetOrderResponse]
+	var resp response.Type[GetOrderResponse]
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.NotNil(t, resp.Data)
 	assert.Equal(t, "order-123", resp.Data.OrderID)
@@ -42,7 +42,7 @@ func TestGetOrder_ShouldReturn200(t *testing.T) {
 
 func TestGetOrder_NotFound_ShouldReturn404(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrder(mock.Anything, "not-found").Return(nil, access.ErrNotFound)
 
@@ -58,7 +58,7 @@ func TestGetOrder_NotFound_ShouldReturn404(t *testing.T) {
 
 func TestGetOrder_DBError_ShouldReturn500(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h, repoMock, _, _ := newTestHandler(t)
+	h, repoMock, _, _, _ := newTestHandler(t)
 
 	repoMock.EXPECT().GetOrder(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 

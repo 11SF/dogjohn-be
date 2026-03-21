@@ -3,8 +3,7 @@ package order
 import (
 	"net/http"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/app"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/wrapper"
+	"github.com/11SF/go-common/response"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,23 +18,14 @@ func (h *handler) GetOrderSummary(c *gin.Context) {
 
 	data, err := h.orderRepo.GetOrderSummary(ctx)
 	if err != nil {
-		wrapper.Respond(c, wrapper.ResponseOption[OrderSummaryResponse]{
-			HTTPStatus: http.StatusInternalServerError,
-			Code:       app.CodeInternalError,
-			Message:    app.MessageInternalError,
-			Err:        err,
-		})
+		response.NewGinResponseError(c, http.StatusInternalServerError,
+			response.NewError(response.GenericError, "Internal Server Error"))
 		return
 	}
 
-	wrapper.Respond(c, wrapper.ResponseOption[OrderSummaryResponse]{
-		HTTPStatus: http.StatusOK,
-		Code:       app.CodeSuccess,
-		Message:    app.MessageSuccess,
-		Data: &OrderSummaryResponse{
-			Today:       data.Today,
-			DogCount:    data.DogCount,
-			TotalAmount: data.TotalAmount,
-		},
+	response.NewGinResponse(c, http.StatusOK, OrderSummaryResponse{
+		Today:       data.Today,
+		DogCount:    data.DogCount,
+		TotalAmount: data.TotalAmount,
 	})
 }

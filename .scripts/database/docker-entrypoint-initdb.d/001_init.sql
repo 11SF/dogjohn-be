@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS price_options (
 CREATE TABLE IF NOT EXISTS orders (
     id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     customer_name TEXT             NOT NULL,
-    price_id      TEXT             NOT NULL REFERENCES price_options (id),
+    price_id      TEXT             NOT NULL,
     slip_image        BYTEA            NOT NULL,
     payment_txn_ref   TEXT,
     order_status  TEXT             NOT NULL DEFAULT 'PENDING'
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS orders (
 -- payment_txn_logs
 CREATE TABLE IF NOT EXISTS payment_txn_logs (
     id         BIGSERIAL    PRIMARY KEY,
-    order_id   TEXT         NOT NULL REFERENCES orders (id),
+    order_id   TEXT         NOT NULL,
     response   JSONB        NOT NULL,
     created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );

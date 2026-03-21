@@ -29,12 +29,12 @@ func NewHomeAssistantClient(baseURL, token, entityID string, client *http.Client
 }
 
 func (c *homeAssistantClient) TriggerFeeder(ctx context.Context) error {
-	body, err := json.Marshal(map[string]string{"entity_id": c.entityID})
+	body, err := json.Marshal(map[string]any{"entity_id": c.entityID, "variables": map[string]any{"amount": 20}})
 	if err != nil {
 		return fmt.Errorf("ha: marshal body: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/api/services/script/turn_on", c.baseURL)
+	url := fmt.Sprintf("%s/api/services/automation/trigger", c.baseURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("ha: create request: %w", err)
