@@ -11,9 +11,6 @@ import (
 	"github.com/11SF/dogjohn-be/config"
 	"github.com/11SF/dogjohn-be/router"
 
-	"gitdev.devops.krungthai.com/starwolf/backend/common/logger"
-	"gitdev.devops.krungthai.com/starwolf/backend/common/shutdown"
-
 	_ "embed"
 	_ "time/tzdata"
 )
@@ -45,14 +42,11 @@ func init() {
 
 func main() {
 	cfg := config.C(config.Env)
-	_ = logger.New(logger.GCPKeyReplacer)
 
 	r, stop := router.New(cfg, version, commit, handlerTimeout)
 	defer stop()
 
 	srv := newServer(cfg, r)
-
-	go shutdown.Graceful(srv, gracefulShutdownDuration)
 
 	slog.Info("run", "port", cfg.Server.Port)
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
