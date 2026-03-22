@@ -73,7 +73,7 @@ vuln: ## govulncheck
 .PHONY: test
 test: ## go test
 	$(call print-target)
-	go test -v -race -covermode=atomic -buildvcs -coverpkg=./... ./... | ./.scripts/colorize
+	go test -v -race ./...
 
 .PHONY: coverage
 coverage: ## run all tests and display coverage
